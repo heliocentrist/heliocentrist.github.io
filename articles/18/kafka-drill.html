@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>SQL queries on Apache Kafka</title>
+  <meta name="description" content="Apache Kafka  is a good example of a great product that knows both its strengths and its limits. One feature that Confluent, the developers of Kafka, apparen...">
+
+  <!-- Google Fonts loaded here depending on setting in _data/options.yml true loads font, blank does not-->
+  
+    <link href='//fonts.googleapis.com/css?family=Lato:400,400italic' rel='stylesheet' type='text/css'>
+  
+  
+  <!-- Load up MathJax script if needed ... specify in /_data/options.yml file-->
+  
+    <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+
+  <link rel="stylesheet" type="text/css" href="/css/tufte.css">
+  <!-- <link rel="stylesheet" type="text/css" href="/css/print.css" media="print"> -->
+
+  <link rel="canonical" href="/articles/18/kafka-drill">
+
+  <link rel="alternate" type="application/rss+xml" title="The Elder Scripts" href="/feed.xml" />
+</head>
+
+  <body>
+    <!--- Header and nav template site-wide -->
+<header>
+    <h1 style="margin-top:3%;">The Elder Scripts</h1>
+    <!--h2>A monoid in the category of things I learned</h2-->
+    <nav class="group" style="padding-top: 0">
+	<!--a href="/"><img class="badge" src="/assets/img/badge_1.png" alt="CH"></a-->
+	
+		
+  	
+		
+		    
+		      <a href="/">blog</a>
+		    
+	    
+  	
+		
+		    
+		      <a href="/about/">About</a>
+		    
+	    
+  	
+		
+		    
+		      <a href="/css/print.css"></a>
+		    
+	    
+  	
+		
+  	
+	</nav>
+</header>
+
+    <article class="group">
+      <h1>SQL queries on Apache Kafka</h1>
+<p class="subtitle">March 16, 2018</p>
+
+<p><span class="newthought">Apache Kafka</span>  is a good example of a great product that knows both its strengths and its limits. One feature that Confluent, the developers of Kafka, apparently do not want to support is random access to the messages in the topics, or search queries on those messages. This is an exercise that Kafka’s documentation leaves to the reader.</p>
+
+<p>To Confluent’s credit they supply us with excellent libraries and frameworks, such as KSQL or Kafka Streams, that we can use to build our own queryable stores, backed by Kafka topics. However, if you deal with Kafka, there comes a time when you just wish that you could run a simple, boring SQL query to find the subset of data that results in some weird behaviour or that your boss wants to see right this minute.</p>
+
+<p>I’m glad to tell you that it is in fact possible, and you don’t have to write a single line of code to search, filter, slice and dice the Kafka topics, as long as they contain JSON messages. You can even use your favourite JDBC client to perform those SQL queries.<!--more--></p>
+
+<p>Now, with enough buildup, I can explain that I am talking about a tool called Apache Drill. It’s a SQL query engine that can read data—and deduce schemas—from a number of various backends, such as Hadoop, MongoDB, Hive or just a file system. As I found out recently, Drill has a plugin that allows us to use Kafka as backend for its queries. In this post I will show how to set up this plugin and what capabilities it gives you.</p>
+
+<p>In this post I’m assuming that you’re using macOS. The commands should also work on Linux without too much hassle.</p>
+
+<hr class="inliner" />
+
+<h2 id="index">Index</h2>
+
+<ul id="markdown-toc">
+  <li><a href="#index" id="markdown-toc-index">Index</a></li>
+  <li><a href="#preparing-a-kafka-cluster" id="markdown-toc-preparing-a-kafka-cluster">Preparing a Kafka cluster</a>    <ul>
+      <li><a href="#quick-installation" id="markdown-toc-quick-installation">Quick installation</a></li>
+      <li><a href="#producing-some-test-messages" id="markdown-toc-producing-some-test-messages">Producing some test messages</a></li>
+    </ul>
+  </li>
+  <li><a href="#preparing-apache-drill" id="markdown-toc-preparing-apache-drill">Preparing Apache Drill</a>    <ul>
+      <li><a href="#installation" id="markdown-toc-installation">Installation</a></li>
+      <li><a href="#pointing-drill-at-kafka" id="markdown-toc-pointing-drill-at-kafka">Pointing Drill at Kafka</a></li>
+      <li><a href="#finally-sql-queries-on-a-topic" id="markdown-toc-finally-sql-queries-on-a-topic">Finally, SQL queries on a topic</a></li>
+    </ul>
+  </li>
+  <li><a href="#exploring-kafka-topics-from-dbeaver" id="markdown-toc-exploring-kafka-topics-from-dbeaver">Exploring Kafka topics from DBeaver</a></li>
+  <li><a href="#limitations-and-further-reading" id="markdown-toc-limitations-and-further-reading">Limitations and further reading</a></li>
+</ul>
+
+<hr class="inliner" />
+
+<h2 id="preparing-a-kafka-cluster">Preparing a Kafka cluster</h2>
+
+<p><span class="newthought">If you have read this far into the post</span> , I assume that you know what Kafka is. On the off chance that you don’t, Kafka is a popular streaming platform built around the idea of a distributed log<label for="One" class="margin-toggle sidenote-number"></label><input type="checkbox" id="One" class="margin-toggle" /><span class="sidenote">Distributed streaming what? Find a more detailed explanation here: <a href="https://kafka.apache.org/intro">kafka.apache.org/intro</a> </span>.If you already have a cluster that you can play with, then you can skip this section, otherwise read on to find out how to start up a Kafka cluster and push some data into it.</p>
+
+<h3 id="quick-installation">Quick installation</h3>
+
+<p>The easiest way to run a Kafka broker is to use a distribution that Confluent themselves provide, aptly named the Confluent Platform.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget http://packages.confluent.io/archive/4.0/confluent-oss-4.0.0-2.11.tar.gz
+<span class="nb">tar</span> <span class="nt">-xvzf</span> confluent-oss-4.0.0-2.11.tar.gz
+<span class="nb">cd </span>confluent-4.0.0
+./bin/confluent start
+</code></pre></div></div>
+
+<p><label for="mf-id-confluentservices" class="margin-toggle">⊕</label><input type="checkbox" id="mf-id-confluentservices" class="margin-toggle" /><span class="marginnote"><img class="fullwidth" src="/assets/img/kafkasql/confluent-services.png" /><br />UP is good.</span>You should see a bunch of messages reporting that the necessary services are “UP”. This means that we can proceed by pushing some messages into our new cluster. We will not use most of these services in this exercise, but for simplicity’s sake we start the Confluent Platform in its default configuration.</p>
+
+<h3 id="producing-some-test-messages">Producing some test messages</h3>
+
+<p>Run the Kafka producer for a topic called <code class="highlighter-rouge">drilltest</code>:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/kafka-console-producer <span class="nt">--broker-list</span> localhost:9092 <span class="nt">--topic</span> drilltest
+</code></pre></div></div>
+
+<p>Then, when you’re in the <code class="highlighter-rouge">&gt;</code> prompt you can enter some JSON messages, for example:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w"> </span><span class="s2">"a"</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="s2">"b"</span><span class="p">:</span><span class="w"> </span><span class="s2">"drilling"</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="w"> </span><span class="s2">"a"</span><span class="p">:</span><span class="w"> </span><span class="mi">321</span><span class="p">,</span><span class="w"> </span><span class="s2">"b"</span><span class="p">:</span><span class="w"> </span><span class="s2">"not anymore"</span><span class="p">,</span><span class="w"> </span><span class="s2">"c"</span><span class="p">:</span><span class="w"> </span><span class="s2">"testing"</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>You will probably see an error complaining that a LEADER is not AVAILABLE. Disregard it, this is only Kafka complaining that it doesn’t know the topic. But the topic will be auto-created for us.</p>
+
+<h2 id="preparing-apache-drill">Preparing Apache Drill</h2>
+
+<p><span class="newthought">Now that we have a Kafka cluster</span>  that we’d like to explore, let’s proceed with installing and configuring Apache Drill.</p>
+
+<h3 id="installation">Installation</h3>
+
+<p>Run the following commands to download, unpack and run Drill:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget http://apache.mirrors.hoobly.com/drill/drill-1.12.0/apache-drill-1.12.0.tar.gz
+<span class="nb">tar</span> <span class="nt">-xvzf</span> apache-drill-1.12.0.tar.gz
+<span class="nb">cd </span>apache-drill-1.12.0
+./bin/drill-embedded
+</code></pre></div></div>
+
+<p>Drill will take several seconds to start up, and then you should see a quirky welcome message<label for="OneAndHalf" class="margin-toggle sidenote-number"></label><input type="checkbox" id="OneAndHalf" class="margin-toggle" /><span class="sidenote">I got: <em>the only truly happy people are children, the creative minority and drill users</em> </span> and a prompt that looks like this: <code class="highlighter-rouge">0: jdbc:drill:zk=local&gt;</code>. We can test the Drill’s query capabilities by trying it out on a filesystem backend.</p>
+
+<p>First, prepare a file to query:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s1">'[{"a": 1}, {"a": 2}, {"a": 3, "b": "dfs test"}]'</span> <span class="o">&gt;</span> /tmp/dfstest.json
+</code></pre></div></div>
+
+<p>Then, run a query in Drill:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">dfs</span><span class="p">.</span><span class="n">tmp</span><span class="p">.</span><span class="nv">`dfstest.json`</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>You should see the data from the JSON file laid out neatly in columns:</p>
+<figure><figcaption></figcaption><img src="/assets/img/kafkasql/dfstest.png" /></figure>
+
+<p>If you do, that means that Drill is properly installed! Note that it has guessed what a schema for our data could look like. Now we can configure Drill to read from Kafka.</p>
+
+<h3 id="pointing-drill-at-kafka">Pointing Drill at Kafka</h3>
+
+<p>For this part we are going to use the web UI of Apache Drill<label for="Two" class="margin-toggle sidenote-number"></label><input type="checkbox" id="Two" class="margin-toggle" /><span class="sidenote">I encourage you to look around in the Drill web UI, it has a few tools you might find useful </span>. Open <a href="localhost:8047/storage">localhost:8047/storage</a> in your browser, find <em>Kafka</em> in the list of <em>Disabled Storage Plugins</em> and click <em>Update</em> next to it. You’ll get to the <em>Configuration</em> page for the Kafka plugin. Enter the following into the big text field:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"kafka"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"kafkaConsumerProps"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"key.deserializer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"org.apache.kafka.common.serialization.ByteArrayDeserializer"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"auto.offset.reset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"earliest"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"bootstrap.servers"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost:9092"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"enable.auto.commit"</span><span class="p">:</span><span class="w"> </span><span class="s2">"true"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"group.id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"drill-query-consumer-1"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"value.deserializer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"org.apache.kafka.common.serialization.ByteArrayDeserializer"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"session.timeout.ms"</span><span class="p">:</span><span class="w"> </span><span class="s2">"30000"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="s2">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Then click <em>Update</em> and <em>Back</em>. That’s all it takes! Finally we can unleash the Drill’s queries on that <code class="highlighter-rouge">drilltest</code> Kafka topic that we’ve created earlier.</p>
+
+<h3 id="finally-sql-queries-on-a-topic">Finally, SQL queries on a topic</h3>
+
+<p>In the Drill prompt enter:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">USE</span> <span class="n">kafka</span><span class="p">;</span>
+<span class="k">SHOW</span> <span class="n">tables</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>At this point you should see all Kafka topics that currently exist in the cluster, including our <code class="highlighter-rouge">drilltest</code>. Proceed with:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">drilltest</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>You should see all the messages that you’ve sent to your topic earlier:</p>
+
+<figure><figcaption></figcaption><img src="/assets/img/kafkasql/drilltest1.png" /></figure>
+
+<p>Let’s try something more sophisticated:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">drilltest</span> <span class="k">WHERE</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">123</span><span class="p">;</span>
+</code></pre></div></div>
+
+<figure><figcaption></figcaption><img src="/assets/img/kafkasql/drilltest2.png" /></figure>
+
+<p>Note that next to the data from JSON the table also includes metadata columns like <code class="highlighter-rouge">kafkaPartitionId</code>, <code class="highlighter-rouge">kafkaMessageOffset</code> and <code class="highlighter-rouge">kafkaMsgTimestamp</code>. I’ve found those immensely useful, because they allow you to query messages based on their time of arrival or find out something about your data. For example, this is how we find out the earliest and the latest timestamp of all messages in the topic.</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">SELECT</span> <span class="n">kafkaPartitionId</span><span class="p">,</span>
+    <span class="n">from_unixtime</span><span class="p">(</span><span class="k">MIN</span><span class="p">(</span><span class="n">kafkaMsgTimestamp</span><span class="p">)</span><span class="o">/</span><span class="mi">1000</span><span class="p">)</span> <span class="k">AS</span> <span class="n">minKafkaTS</span><span class="p">,</span>
+    <span class="n">from_unixtime</span><span class="p">(</span><span class="k">MAX</span><span class="p">(</span><span class="n">kafkaMsgTimestamp</span><span class="p">)</span><span class="o">/</span><span class="mi">1000</span><span class="p">)</span> <span class="k">AS</span> <span class="n">maxKafkaTS</span>
+    <span class="k">FROM</span> <span class="n">drilltest</span> <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">kafkaPartitionId</span><span class="p">;</span>
+</code></pre></div></div>
+
+<figure><figcaption></figcaption><img src="/assets/img/kafkasql/partitions.png" /></figure>
+
+<h2 id="exploring-kafka-topics-from-dbeaver">Exploring Kafka topics from DBeaver</h2>
+
+<p><span class="newthought">In the beginning of the post</span>  I promised that you can use a JDBC client to run SQL queries on Kafka topics, and now it’s time to fulfil the promise. My client of choice is <a href="https://dbeaver.jkiss.org/">DBeaver</a>. If you’d like to follow along, you can download it here: <a href="https://dbeaver.jkiss.org/download/">dbeaver.jkiss.org/download</a>. You should keep Drill running for this exercise.</p>
+
+<p>Once DBeaver is installed, run it and click the leftmost button in the menu bar to create a new connection. You will see the list of drivers available in your system. Expand the <em>Hadoop</em> entry and you will find the <em>Apache Drill</em> driver. Select it and click <em>Next</em>. You’ll get to the <em>Connection settings</em> screen. Now you just need to set the connection details, specifically the JDBC URL. Click <em>Edit Driver Settings</em> and in that screen change the <em>URL Template</em> to <code class="highlighter-rouge">jdbc:drill:drillbit=localhost</code>. Click <em>OK</em> to go back and make sure that your change has been applied. You can test the connection to make sure everything is tied together, and then click <em>Finish</em><label for="Three" class="margin-toggle sidenote-number"></label><input type="checkbox" id="Three" class="margin-toggle" /><span class="sidenote">If you have errors while configuring the driver, please ensure that you have the latest versions of both Drill and DBeaver. I am using Drill 1.12.0 and DBeaver 5.0.0. </span>.</p>
+
+<p>This is it! Now you have a connection to Drill, and you can expand the <code class="highlighter-rouge">kafka</code> schema to find the topics (which are called <em>Tables</em> in this view). DBeaver allows you to treat those topics like if they are database tables, so you can view the data and run queries on it.</p>
+
+<p>Isn’t it beautiful:</p>
+<figure><figcaption></figcaption><img src="/assets/img/kafkasql/dbeaver.png" /></figure>
+
+<h2 id="limitations-and-further-reading">Limitations and further reading</h2>
+
+<p><span class="newthought">In the Drill release I am using</span>  the Kafka plugin is included, and you can find its source code and documentation <a href="https://github.com/apache/drill/tree/master/contrib/storage-kafka">on Github</a>. However, at the moment the  plugin only works with JSON messages. The developers do have a plan to support Avro in one of the future releases.</p>
+
+<p>You might find that a query on a big busy Kafka topic can be rather slow. This is not Drill’s fault, it is just a consequence of how Kafka is designed. For this reason I wouldn’t recommend using Drill queries on Kafka in hot paths in production, this feature is better suited for development and ad-hoc support scenarios.</p>
+
+<p>For the purposes of this tutorial we have started Drill in the simplest embedded mode. If you like what the tool has to offer, you can find out how to run it in a cluster setup in the <a href="https://drill.apache.org/docs/install-drill-introduction/">Drill Documentation</a>.</p>
+
+<p>In this tutorial I was using the following versions of tools:</p>
+
+<div class="table-wrapper">
+<br />
+  <table class="table-alpha" id="newspaper-tone">
+    <tbody>
+      <tr>
+        <td class="text">Apache Drill</td>
+        <td class="number">1.12.0</td>
+      </tr>
+      <tr>
+        <td class="text">Apache Kafka</td>
+        <td class="number">1.0.0-cp1</td>
+      </tr>
+      <tr>
+        <td class="text">Confluent Platform</td>
+        <td class="number">4.0.0</td>
+      </tr>
+      <tr>
+        <td class="text">DBeaver</td>
+        <td class="number">5.0.0</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+
+    </article>
+    <span class="print-footer">SQL queries on Apache Kafka - March 16, 2018 - Yury Liavitski</span>
+    <footer>
+  <hr class="slender">
+  <ul class="footer-links">
+    <li><a href="mailto:yury.liavitski@kemia.org"><span class="icon-mail"></span></a></li>    
+    
+      <li>
+        <a href="//www.twitter.com/heliocene"><span class="icon-twitter"></span></a>
+      </li>
+    
+      <li>
+        <a href="//github.com/heliocentrist"><span class="icon-github"></span></a>
+      </li>
+    
+      <li>
+        <a href="/feed.xml"><span class="icon-feed"></span></a>
+      </li>
+    
+  </ul>
+<div class="credits">
+<span>&copy; 2018 &nbsp;&nbsp;YURY LIAVITSKI</span></br> <br>
+<span>This site created with the <a href="//github.com/clayh53/tufte-jekyll">Tufte theme for A monoid in the category of things I learned </a> in <a href="//jekyllrb.com">Jekyll</a>.</span>
+</div>
+</footer>
+
+  </body>
+</html>

@@ -197,19 +197,10 @@ html {
     font-size: 12px; } }
 @media screen and (min-width: 900px) {
   html {
-    font-size: 13px; } }
+    font-size: 12px; } }
 @media screen and (min-width: 1000px) {
   html {
-    font-size: 14px; } }
-@media screen and (min-width: 1100px) {
-  html {
-    font-size: 15px; } }
-@media screen and (min-width: 1200px) {
-  html {
-    font-size: 16px; } }
-@media screen and (min-width: 1300px) {
-  html {
-    font-size: 17px; } }
+    font-size: 12px; } }
 .mathblock {
   font-size: 1.3rem; }
 
@@ -218,8 +209,10 @@ a {
   text-decoration: none; }
 
 p > a {
-  color: #a00000;
-  text-decoration: none; }
+  color: #111;
+  text-decoration: none;
+  border-bottom: 1px solid #777;
+  padding-bottom: 1px; }
 
 body {
   width: 87.5%;
@@ -471,12 +464,11 @@ div.table-wrapper {
   font-size: 1rem; }
 
 pre, pre code, p pre code {
-  width: 52.5%;
-  padding-left: 2.5%;
+  width: 100%;
   overflow-x: auto; }
 
 .fullwidth, li.listing div {
-  max-width: 90%; }
+  max-width: 100%; }
 
 .full-width .sidenote, .full-width .sidenote-number, .full-width .marginnote {
   display: none; }
@@ -554,10 +546,7 @@ header > nav.group, body footer {
   padding-top: 2rem; }
 
 nav.group a.active:before {
-  content: "\0003c\000a0"; }
-
-nav.group a.active:after {
-  content: " >"; }
+  content: "✓ "; }
 
 header > nav a {
   font-size: 1.2rem;
@@ -566,13 +555,17 @@ header > nav a {
   text-transform: uppercase;
   color: #a00000;
   padding-top: 1.5rem;
-  text-decoration: none;
+  text-decoration: underline;
   display: inline-block;
   float: left;
   margin-top: 0;
   margin-bottom: 0;
   padding-right: 2rem;
   vertical-align: baseline; }
+
+nav.group a.active {
+  font-weight: 600;
+  text-decoration: none; }
 
 header > nav a img {
   height: 5rem;
@@ -761,3 +754,7 @@ hr.slender {
   content: "\e60e"; }
 
 /*-- End of Icomoon icon font section --*/
+/*-- Custom stuff --*/
+hr.inliner {
+  width: 60%;
+  margin-top: 2%; }
