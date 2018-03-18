@@ -13,7 +13,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>The Elder Scripts: About</title>
+  <title>The Elder Scripts: Blog</title>
   <meta name="description" content="A blog about programming">
   <link rel="icon" type="image/ico" href="/assets/img/favicon.ico">
   <!-- Google Fonts loaded here depending on setting in _data/options.yml true loads font, blank does not-->
@@ -29,7 +29,7 @@
   <link rel="stylesheet" type="text/css" href="/css/tufte.css">
   <!-- <link rel="stylesheet" type="text/css" href="/css/print.css" media="print"> -->
 
-  <link rel="canonical" href="/">
+  <link rel="canonical" href="/blog/">
 
   <link rel="alternate" type="application/rss+xml" title="The Elder Scripts" href="/feed.xml" />
 </head>
@@ -46,13 +46,13 @@
   	
 		
 		    
-		      <a href="/blog/">Blog</a>
+		      <a class="active" href="/blog/" class="active">Blog</a>
 		    
 	    
   	
 		
 		    
-		      <a class="active" href="/" class="active">About</a>
+		      <a href="/">About</a>
 		    
 	    
   	
@@ -68,22 +68,26 @@
 </header>
 
     <article>
-      <h2 id="hello-and-welcome">Hello and welcome!</h2>
+        <h2 class="content-listing-header" style="text-align: center">A monoid in the category of things I learned</h2>
+  <ul class="content-listing ">
+    
+        <li class="listing">
+          <hr class="slender">
+          <a href="/articles/18/kafka-drill"><h3 class="contrast">SQL queries on Apache Kafka</h3></a>
+          <br><span class="smaller">March 16, 2018</span>  <br/>
+          <div><p><span class="newthought">Apache Kafka</span>  is a good example of a great product that knows both its strengths and its limits. One feature that Confluent, the developers of Kafka, apparently do not want to support is random access to the messages in the topics, or search queries on those messages. This is an exercise that Kafka’s documentation leaves to the reader.</p>
 
-<p>I’m <a href="https://twitter.com/Heliocene">Yury Liavitski</a>.</p>
+<p>To Confluent’s credit they supply us with excellent libraries and frameworks, such as KSQL or Kafka Streams, that we can use to build our own queryable stores, backed by Kafka topics. However, if you deal with Kafka, there comes a time when you just wish that you could run a simple, boring SQL query to find the subset of data that results in some weird behaviour or that your boss wants to see right this minute.</p>
 
-<p>I’m a software developer and a data engineer. My favourite area of work is the fast data space, I enjoy setting up data pipelines and streaming services. If I can help you with similar projects by working with you or just by answering a question, please do not hesitate to contact me at yury.liavitski@kemia.org .</p>
+<p>I’m glad to tell you that it is in fact possible, and you don’t have to write a single line of code to search, filter, slice and dice the Kafka topics, as long as they contain JSON messages. You can even use your favourite JDBC client to perform those SQL queries.</p>
 
-<p>I love studying distributed systems, functional programming, and recently I’m obsessed with a new systems programming language called <a href="https://www.rust-lang.org">Rust</a>. I’ve started a <a href="https://theelderscripts.com">blog</a> to help me organise my study notes. When I study a topic I find that it’s useful to code a small project in that area. I have a <a href="https://github.com/heliocentrist">Github account</a> where I store these projects.</p>
-
-<p>In the past I have worked in various companies, from an investment bank to a loyalty program supplier. It’s been around 13 years since I’ve started coding professionally, so I have a <a href="https://www.linkedin.com/in/yuryliavitski/">LinkedIn profile</a> to help me remember where I used to work.</p>
-
-<p>I live in a small beautiful town called Haarlem, in the Netherlands. Next to programming the things I love are history, archeology and travelling across Europe taking photos of castles and churches.</p>
-
-<p>Thanks for visiting my site!</p>
+</div>
+        </li>
+    
+  </ul>
 
     </article>
-    <span class="print-footer">About - Yury Liavitski</span>
+    <span class="print-footer">Blog - Yury Liavitski</span>
     <footer>
   <hr class="slender">
   <ul class="footer-links">
